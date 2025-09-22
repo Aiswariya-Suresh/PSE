@@ -1,0 +1,345 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Search Engine? - More like your secret dictionary</title>
+
+<!-- Tailwind CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg-start: #fff5f9;
+    --bg-end: #fff0f6;
+  }
+  html,body { height:100%; }
+  body {
+    margin:0;
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    background: linear-gradient(180deg,var(--bg-start),var(--bg-end));
+    transition: background 600ms ease;
+    color:#1f2937;
+  }
+  .coquette-title { font-family: "Playfair Display", serif; }
+  .card {
+    background: rgba(255,255,255,0.72);
+    backdrop-filter: blur(6px);
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(224,140,183,0.08);
+    transition: transform .22s ease, box-shadow .22s ease;
+  }
+  .card:hover { transform: translateY(-6px); box-shadow: 0 22px 46px rgba(224,140,183,0.12); }
+  .fade-up { transform: translateY(8px); opacity: 0; animation: fadeUp .4s forwards; }
+  @keyframes fadeUp { to { transform: translateY(0); opacity: 1; } }
+  .mic-active { animation: micPulse 1s infinite; }
+  @keyframes micPulse {
+    0% { box-shadow: 0 0 0 0 rgba(255,99,164,.18); }
+    70% { box-shadow: 0 0 0 14px rgba(255,99,164,0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,99,164,0); }
+  }
+
+  /* Layout tweaks */
+  .app-shell { display: grid; grid-template-columns: 280px 1fr; gap:20px; max-width:1200px; margin:36px auto; padding:0 20px; width:100%; }
+  .content { min-height:60vh; }
+  @media (max-width: 1024px){ .app-shell { grid-template-columns: 1fr; padding: 0 16px; } .left-col { order:2 } .right-col { order:1 } }
+
+  /* Sidebar scroll hide on webkit */
+  .sidebar::-webkit-scrollbar { width: 0; height:0; }
+
+  /* Responsive grid in results */
+  .results-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:18px; }
+  @media (max-width:900px){ .results-grid { grid-template-columns: repeat(2,1fr); } }
+  @media (max-width:520px){ .results-grid { grid-template-columns: 1fr; } }
+
+  /* Thin subtle borders */
+  .muted { color:#6b7280; }
+
+  /* Video background layering anchor */
+  #videoBackdrop { position: fixed; inset:0; z-index:-1; object-fit:cover; width:100%; height:100%; opacity:.24; filter: saturate(.9) blur(.4px); }
+</style>
+</head>
+<body class="antialiased">
+
+<!-- ===== Video background placeholder =====
+  To use a background video, uncomment the <video> element below and replace the src with your video file.
+  See the "Where to add background video" note after the file for details.
+-->
+<!-- <video id="videoBackdrop" autoplay muted loop playsinline>
+  <source src="media/background.mp4" type="video/mp4">
+  Your browser doesn't support video backgrounds.
+</video> -->
+
+<div class="app-shell">
+
+  <!-- Sidebar (left) -->
+  <aside class="left-col card p-4 sidebar max-h-[80vh] overflow-auto">
+    <div class="flex items-center justify-between mb-3">
+      <div>
+        <h2 class="coquette-title text-lg text-pink-600">Search Engine?</h2>
+        <div class="text-xs muted">More like your secret dictionary</div>
+      </div>
+      <button id="toggleSidebar" class="text-sm px-3 py-1 bg-pink-50 border border-pink-100 rounded-full text-pink-600">Hide</button>
+    </div>
+
+    <div class="mt-2">
+      <label class="text-xs muted">Search history</label>
+      <div id="historyList" class="mt-3 space-y-2">
+        <!-- History items injected -->
+      </div>
+      <div class="mt-4 flex items-center gap-2">
+        <button id="clearHistoryBtn" class="flex-1 text-sm py-2 bg-white border border-pink-100 rounded-md text-pink-600">Clear history</button>
+        <button id="openSearchBtn" class="text-sm py-2 px-3 bg-pink-600 text-white rounded-md">Search</button>
+      </div>
+    </div>
+
+    <div class="mt-6 border-t pt-4">
+      <label class="text-xs muted">Quick filters</label>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <button class="filterBtn px-3 py-1 rounded-full text-xs border border-pink-100">fashion</button>
+        <button class="filterBtn px-3 py-1 rounded-full text-xs border border-pink-100">beauty</button>
+        <button class="filterBtn px-3 py-1 rounded-full text-xs border border-pink-100">coding</button>
+        <button class="filterBtn px-3 py-1 rounded-full text-xs border border-pink-100">travel</button>
+        <button class="filterBtn px-3 py-1 rounded-full text-xs border border-pink-100">wellness</button>
+      </div>
+    </div>
+
+    <div class="mt-6 text-xs muted">History lives in your browser only. Click an item to re-run the search.</div>
+  </aside>
+
+  <!-- Main content (right) -->
+  <main class="right-col content">
+    <div class="card p-5">
+      <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+        <div class="flex-1">
+          <h1 class="coquette-title text-2xl sm:text-3xl text-pink-600 mb-1">Search Engine?</h1>
+          <div class="text-sm muted">More like your secret dictionary — discover curated finds across lifestyle & design.</div>
+        </div>
+
+        <div class="w-full sm:w-auto">
+          <div class="flex gap-2">
+            <input id="searchInput" type="search" placeholder="Search pastel UI kits, cozy books, quick recipes..." class="flex-1 px-4 py-3 rounded-lg border border-pink-100 shadow-sm placeholder:text-pink-300 focus:outline-none focus:ring-2 focus:ring-pink-200" />
+            <button id="voiceBtn" title="Voice search" class="bg-white p-3 rounded-lg border border-pink-100">
+              <svg id="micIcon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-pink-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M12 1v11m0 0a3 3 0 003-3V5a3 3 0 10-6 0v4a3 3 0 003 3zM19 11v1a7 7 0 01-14 0v-1" />
+              </svg>
+            </button>
+            <button id="searchBtn" class="px-4 py-3 bg-pink-600 text-white rounded-lg">Search</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4 flex items-center justify-between">
+        <div class="text-sm muted" id="resultsMeta">Enter a search to begin</div>
+        <div class="text-sm muted">Results from local dataset · Lightweight</div>
+      </div>
+    </div>
+
+    <!-- results grid -->
+    <section class="mt-6">
+      <div id="resultsGrid" class="results-grid">
+        <!-- cards injected here -->
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Card template -->
+<template id="cardTemplate">
+  <a class="card p-4 block group h-full" target="_blank" rel="noopener">
+    <div class="flex items-start justify-between">
+      <div class="pr-4">
+        <h3 class="text-lg font-semibold text-pink-600 name"></h3>
+        <div class="text-sm muted desc mt-1"></div>
+      </div>
+      <div class="text-xs px-2 py-1 rounded-md border border-pink-100 category muted"></div>
+    </div>
+    <div class="mt-4 text-sm muted url"></div>
+  </a>
+</template>
+
+<script>
+/* ---------- Basic utilities ---------- */
+const $ = (s)=>document.querySelector(s);
+const $$ = (s)=>Array.from(document.querySelectorAll(s));
+
+/* ---------- DOM refs ---------- */
+const searchInput = $('#searchInput');
+const searchBtn = $('#searchBtn');
+const voiceBtn = $('#voiceBtn');
+const resultsGrid = $('#resultsGrid');
+const resultsMeta = $('#resultsMeta');
+const historyList = $('#historyList');
+const clearHistoryBtn = $('#clearHistoryBtn');
+const toggleSidebar = $('#toggleSidebar');
+const openSearchBtn = $('#openSearchBtn');
+
+let recognition = null;
+let listening = false;
+const historyKey = 'secret_dictionary_history_v1';
+const maxHistory = 80;
+
+/* ---------- Theme map (category -> gradient) ---------- */
+const genreThemes = {
+  fashion: ['#fff0f6','#fff0f6'],
+  beauty: ['#fff5f0','#fff0f6'],
+  coding: ['#f0f7ff','#eef6ff'],
+  travel: ['#fff7ed','#fff3ea'],
+  wellness: ['#f3fff5','#ecfff2'],
+  education: ['#f6f8ff','#eef2ff'],
+  food: ['#fff9f0','#fff2e6'],
+  books: ['#fff6fb','#fef0fb'],
+  entertainment: ['#fff3f9','#ffeef8'],
+  default: ['#fff5f9','#fff0f6']
+};
+
+function applyTheme(cat){
+  const c = cat && genreThemes[cat.toLowerCase()] ? genreThemes[cat.toLowerCase()] : genreThemes.default;
+  document.documentElement.style.setProperty('--bg-start', c[0]);
+  document.documentElement.style.setProperty('--bg-end', c[1]);
+}
+
+/* ---------- History ---------- */
+function readHistory(){ try { return JSON.parse(localStorage.getItem(historyKey) || '[]'); } catch(e){ return []; } }
+function writeHistory(arr){ localStorage.setItem(historyKey, JSON.stringify(arr.slice(0,maxHistory))); }
+function pushHistory(q){
+  if(!q) return;
+  let h = readHistory();
+  h = h.filter(x => x !== q);
+  h.unshift(q);
+  writeHistory(h);
+  renderHistory();
+}
+function clearHistory(){
+  localStorage.removeItem(historyKey);
+  renderHistory();
+}
+function renderHistory(){
+  const h = readHistory();
+  historyList.innerHTML = '';
+  if(h.length === 0){
+    historyList.innerHTML = '<div class="text-sm muted">No history yet — searches will appear here.</div>';
+    return;
+  }
+  h.forEach(item => {
+    const btn = document.createElement('button');
+    btn.className = 'w-full text-left p-2 rounded-md hover:bg-pink-50 text-sm';
+    btn.textContent = item;
+    btn.onclick = ()=> { searchInput.value = item; performSearch(item); };
+    historyList.appendChild(btn);
+  });
+}
+
+/* ---------- Search / fetch ---------- */
+async function fetchSearch(q){
+  try {
+    const res = await fetch('/search?query='+encodeURIComponent(q));
+    if(!res.ok) return [];
+    return await res.json();
+  } catch(e){ console.error(e); return []; }
+}
+
+function makeCard(item){
+  const tpl = document.getElementById('cardTemplate').content.cloneNode(true);
+  const a = tpl.querySelector('a');
+  a.href = item.url;
+  tpl.querySelector('.name').textContent = item.name;
+  tpl.querySelector('.desc').textContent = item.description;
+  tpl.querySelector('.category').textContent = item.category;
+  tpl.querySelector('.url').textContent = item.url;
+  return tpl;
+}
+
+function renderResults(items, q){
+  resultsGrid.innerHTML = '';
+  if(!q || q.trim()===''){
+    resultsMeta.textContent = 'Enter a search to begin';
+    applyTheme('default');
+    return;
+  }
+  if(items.length === 0){
+    resultsMeta.textContent = `No results for "${q}"`;
+    applyTheme('default');
+    return;
+  }
+  resultsMeta.textContent = `${items.length} result${items.length>1?'s':''} for "${q}"`;
+
+  // find most common category among results
+  const count = {};
+  items.forEach(it => { const c = (it.category||'').toLowerCase(); count[c] = (count[c]||0)+1; });
+  let top = null;
+  Object.entries(count).sort((a,b)=>b[1]-a[1]).some(([k,v]) => { top=k; return true; });
+  applyTheme(top || 'default');
+
+  items.forEach((it,i) => {
+    const node = makeCard(it);
+    const wrapper = node.firstElementChild;
+    wrapper.classList.add('fade-up');
+    wrapper.style.animationDelay = `${i*20}ms`;
+    resultsGrid.appendChild(node);
+  });
+}
+
+/* Debounce helper */
+function debounce(fn, ms=200){
+  let t;
+  return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); };
+}
+
+/* Perform search */
+const performSearch = debounce(async (q) => {
+  q = (q||'').trim();
+  if(!q){ renderResults([], q); return; }
+  resultsMeta.textContent = 'Searching...';
+  const res = await fetchSearch(q);
+  renderResults(res, q);
+  pushHistory(q);
+}, 150);
+
+/* ---------- Voice search (Web Speech API) ---------- */
+function setupVoice(){
+  if(!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)){
+    voiceBtn.style.display = 'none';
+    return;
+  }
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+  recognition.lang = 'en-US';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+  recognition.onstart = ()=>{ listening=true; voiceBtn.classList.add('mic-active'); };
+  recognition.onend = ()=>{ listening=false; voiceBtn.classList.remove('mic-active'); };
+  recognition.onresult = (e)=>{ const t = e.results[0][0].transcript; searchInput.value = t; performSearch(t); };
+  recognition.onerror = ()=>{ listening=false; voiceBtn.classList.remove('mic-active'); };
+  voiceBtn.addEventListener('click', ()=> {
+    if(listening) recognition.stop(); else recognition.start();
+  });
+}
+setupVoice();
+
+/* ---------- Events ---------- */
+searchBtn.addEventListener('click', ()=> performSearch(searchInput.value));
+searchInput.addEventListener('keydown', (e)=> { if(e.key === 'Enter') performSearch(searchInput.value); });
+clearHistoryBtn.addEventListener('click', ()=> clearHistory());
+toggleSidebar.addEventListener('click', ()=>{
+  const aside = document.querySelector('.left-col');
+  if(aside.style.display === 'none'){ aside.style.display = 'block'; toggleSidebar.textContent = 'Hide'; }
+  else { aside.style.display = 'none'; toggleSidebar.textContent = 'Show'; }
+});
+openSearchBtn.addEventListener('click', ()=> { searchInput.focus(); });
+
+$$('.filterBtn').forEach(b => b.addEventListener('click', ()=> {
+  const q = b.textContent.trim();
+  searchInput.value = q;
+  performSearch(q);
+}));
+
+/* ---------- Initial load ---------- */
+renderHistory();
+applyTheme('default');
+performSearch('pastel ui kit'); // seed so UI shows content on load
+</script>
+</body>
+</html>
